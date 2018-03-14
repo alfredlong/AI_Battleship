@@ -1,3 +1,5 @@
 # AI_Battleship
-## Install pygame
-```python -m pip install -U pygame```
+## Install packages
+```pip install numpy```
+```pip install matplotlib```
+```pip install enum```
