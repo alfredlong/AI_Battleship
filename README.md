@@ -1,5 +1,5 @@
 # AI_Battleship
 ## Install packages
-```pip install numpy```
-```pip install matplotlib```
-```pip install enum```
+```pip install numpy```<br/>
+```pip install matplotlib```<br/>
+```pip install enum```<br/>
