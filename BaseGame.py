@@ -2,9 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from Board import Board
 from Agent import Agent
+from Constants import *
 
-n_rows = 10
-n_cols = 20
+n_x = 20
+n_y = 8
 
 # Define some ships
 battleship = np.array([[0,1,2,3],[0,0,0,0]])
@@ -14,23 +15,19 @@ carrier = np.array([[0,1,1,2,3],[0,0,1,0,0]])
 carrier_v = np.array([[0,1,0,0,0],[0,1,1,2,3]])
 v_idx = [1,0]
 
-shipsArray = [(patrol, 1), (battleship, 2), (battleship[v_idx], 2), (uboat, 3), (carrier, 4), (carrier_v, 4)]
+shipsArray = [(patrol, 11), (battleship, 12), (battleship[v_idx], 12), (uboat, 13), (carrier, 14), (carrier_v, 14)]
 
-gameBoard = Board(n_rows, n_cols)
-agent = Agent(gameBoard, None)
+gameBoard = Board(n_x, n_y)
+agent = Agent(gameBoard, gameBoard)
 
 agent.placeShips(shipsArray)
 gameBoard.drawBoard()
 
-x = raw_input("X: ")
-y = raw_input("Y: ")
+while np.count_nonzero(gameBoard.dataGrid > 10) > 0:
+    if agent.fightMode == FightMode.HUNT:
+        agent.huntShip()
+    else:
+        agent.targetShip()
 
-gameBoard.updateCell(x, y, 5)
-
-x = raw_input("X: ")
-y = raw_input("Y: ")
-
-gameBoard.updateCell(x, y, 5)
-
-x = raw_input("X: ")
-y = raw_input("Y: ")
+print('Total shots: ' + str(agent.shotCount))
+raw_input()

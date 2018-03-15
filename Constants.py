@@ -1,7 +1,12 @@
 from enum import Enum
 
-class SeaState(Enum):
-    CLEAR = 0
-    MISS = 1
-    HIT = 2
-    SUNK = 3
+SeaState = {
+    'CLEAR': 0,
+    'MISS': 3,
+    'HIT': 5,
+    'SUNK': 7,
+}
+
+class FightMode(Enum):
+    HUNT = 0
+    TARGET = 1
