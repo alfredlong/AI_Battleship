@@ -15,8 +15,12 @@ class Agent(object):
         print('Color: ' + str(color))
         print('Location: ' + str(location))
 
+        ship.placedLocation = location
         rs_location = np.reshape((location[1], location[0]),(2,1))
-        idx = zip(rs_location+ship)
+        print(rs_location)
+        print(ship.getTransposedArray())
+        idx = zip(rs_location + ship.getTransposedArray())
+        print(idx)
         if self.selfBoard.checkGrid[idx].all() and not self.selfBoard.dataGrid[idx].any():
             self.selfBoard.dataGrid[idx] = color
             print('Status: Success')

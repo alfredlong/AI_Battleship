@@ -10,3 +10,7 @@ SeaState = {
 class FightMode(Enum):
     HUNT = 0
     TARGET = 1
+
+class Orientation(Enum):
+    VERTICAL = 0
+    HORIZONTAL = 1
