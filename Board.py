@@ -5,7 +5,8 @@ from Constants import *
 class Board(object):
     dataGrid = np.zeros((0, 0))
     checkGrid = np.zeros((0, 0))
-    maxShipLength = 5
+    weightGrid = np.zeros((0, 0))
+    maxShipLength = 4
     n_time = 1
 
     def __init__(self, n_x, n_y):
@@ -16,6 +17,7 @@ class Board(object):
 
     def initDataGrid(self):
         self.dataGrid = np.zeros((self.n_y, self.n_x))
+        self.weightGrid = np.zeros((self.n_y, self.n_x))
         self.checkGrid = np.zeros((self.n_y + self.maxShipLength, self.n_x + self.maxShipLength))
         self.checkGrid[:self.n_y,:self.n_x] = 1
 
@@ -38,6 +40,7 @@ class Board(object):
     def updateCell(self, x, y, value):
         print('Shot at X=%d, Y=%d, value=%d' % (x, y, value))
         self.dataGrid[int(y)][int(x)] = value
+        self.weightGrid[int(y)][int(x)] = -9999
         self.plot.set_data(self.dataGrid)
         plt.pause(.01)
         plt.draw()

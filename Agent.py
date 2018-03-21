@@ -1,51 +1,95 @@
 import numpy as np
 from Constants import *
+from Ship import *
 
 class Agent(object):
     potentialTargetList = []
     fightMode = FightMode.HUNT
+    predictionBoard = []
     shotCount = 0
 
-    def __init__(self, selfBoard, enemyBoard):
+    ownShipsArray = []
+    enemyShipsArray = []
+
+    lastPlacedPoint = (np.random.random_integers(0, 1), 0)
+
+    def __init__(self, selfBoard, enemyBoard, ownShips, enemyShips):
         super(Agent, self).__init__()
         self.selfBoard = selfBoard
         self.enemyBoard = enemyBoard
+        self.ownShips = ownShips
+        self.enemyShips = enemyShips
+        self.ownShipsArray = self.initShipsArray(ownShips)
+        self.enemyShipsArray = self.initShipsArray(enemyShips)
+        self.predictionBoard = np.copy(self.enemyBoard.weightGrid)
+
+    def initShipsArray(self, inObj):
+        shipArray = []
+        for key, value in inObj.iteritems():
+            if key == 'CV':
+                for i in xrange(value):
+                    ship = Carrier()
+                    shipArray.append((ship, ship.shipId + 10))
+            elif key == 'BB':
+                for i in xrange(value):
+                    ship = Battleship()
+                    shipArray.append((ship, ship.shipId + 10))
+            elif key == 'CA':
+                for i in xrange(value):
+                    ship = Cruiser()
+                    shipArray.append((ship, ship.shipId + 10))
+            elif key == 'DD':
+                for i in xrange(value):
+                    ship = Destroyer()
+                    shipArray.append((ship, ship.shipId + 10))
+            elif key == 'OR':
+                for i in xrange(value):
+                    ship = OilRig()
+                    shipArray.append((ship, ship.shipId + 10))
+        return shipArray
+
 
     def tryPlaceShip(self, location, ship, color):
-        print('Color: ' + str(color))
-        print('Location: ' + str(location))
-
         ship.placedLocation = location
         rs_location = np.reshape((location[1], location[0]),(2,1))
-        print(rs_location)
-        print(ship.getTransposedArray())
         idx = zip(rs_location + ship.getTransposedArray())
-        print(idx)
         if self.selfBoard.checkGrid[idx].all() and not self.selfBoard.dataGrid[idx].any():
             self.selfBoard.dataGrid[idx] = color
-            print('Status: Success')
             return True
-        print('Status: Fail')
         return False
 
     def placeShips(self, ships):
         for ship in ships:
-            location = self.pickRandomSpot(self.selfBoard)
+            location = self.pickRandomParitySpot(self.selfBoard, ship[0].maxSize)
             while self.tryPlaceShip(location, ship[0], ship[1]) == False:
-                location = self.pickRandomSpot(self.selfBoard)
+                location = self.pickRandomParitySpot(self.selfBoard, ship[0].maxSize)
 
     def pickRandomSpot(self, board):
         return (np.random.random_integers(0, board.n_x-1), np.random.random_integers(0, board.n_y-1))
 
+    def pickRandomParitySpot(self, board, size):
+        while self.lastPlacedPoint[0] < board.n_x:
+            xVal = self.lastPlacedPoint[0]
+            yVal = np.random.random_integers(0, board.n_y-1)
+            self.lastPlacedPoint = (self.lastPlacedPoint[0] + size + 1, self.lastPlacedPoint[1])
+            return (xVal, yVal)
+        return (np.random.random_integers(0, board.n_x-1), np.random.random_integers(0, board.n_y-1))
+
+    def pickBaseOnPrediction(self, returnNumber):
+        return list(np.argwhere(self.predictionBoard.max() == self.predictionBoard))[:returnNumber]
+
     def huntShip(self):
-        pickedX, pickedY = self.pickRandomSpot(self.enemyBoard)
-        while self.checkValidCell(pickedX, pickedY, self.enemyBoard) == False:
-            pickedX, pickedY = self.pickRandomSpot(self.enemyBoard)
-        result = self.shotBoard(pickedX, pickedY)
-        if result == SeaState['HIT']:
-            self.fightMode = FightMode.TARGET
-            self.findAndAddPotentialTargetsToList(pickedX, pickedY, self.enemyBoard)
-        self.enemyBoard.updateCell(pickedX, pickedY, result)
+        pickedList = self.pickBaseOnPrediction(1)
+        # while self.checkValidCell(pickedX, pickedY, self.enemyBoard) == False:
+        #     pickedX, pickedY = self.pickBaseOnPrediction(1)
+
+        for point in pickedList:
+            result = self.shotBoard(point[1], point[0])
+            if result == SeaState['HIT']:
+                self.fightMode = FightMode.TARGET
+                self.findAndAddPotentialTargetsToList(point[1], point[0], self.enemyBoard)
+            self.enemyBoard.updateCell(point[1], point[0], result)
+            self.updatePredictionBoard()
 
     def targetShip(self):
         if len(self.potentialTargetList) > 0:
@@ -54,8 +98,16 @@ class Agent(object):
             if result == SeaState['HIT']:
                 self.findAndAddPotentialTargetsToList(nextX, nextY, self.enemyBoard)
             self.enemyBoard.updateCell(nextX, nextY, result)
+            self.updatePredictionBoard()
         else:
             self.fightMode = FightMode.HUNT
+
+            #TEST
+            for key, value in self.enemyShips.iteritems():
+                if value > 0:
+                    value -= 1
+                    break
+
             self.huntShip()
 
 
@@ -87,3 +139,36 @@ class Agent(object):
 
             if self.checkValidCell(newX, newY, board):
                 self.potentialTargetList.append((newX, newY))
+
+    def updatePredictionBoard(self):
+        self.predictionBoard = np.copy(self.enemyBoard.weightGrid)
+        self.applyGradientEvaluation()
+
+    def applyGradientEvaluation(self):
+        currentEnemyShips = self.initShipsArray(self.enemyShips)
+        for ship in currentEnemyShips:
+            for y in xrange(self.enemyBoard.n_y):
+                for x in xrange(self.enemyBoard.n_x):
+                    for dir in xrange(2):
+                        if self.predictionBoard[int(y)][int(x)] != -1:
+                            location = np.reshape((y, x),(2,1))
+                            if dir == 0:
+                                tArr = ship[0].getTransposedShape(ship[0].getVerticalShape())
+                            else:
+                                tArr = ship[0].getTransposedShape(ship[0].getHorizontalShape())
+                            idx = zip(location + tArr)
+                            if self.enemyBoard.checkGrid[idx].all():
+                                coords = (np.asarray(ship[0].shape) + (x, y)).tolist()
+                                errFlag = False
+                                for coord in coords:
+                                    if coord[0] >= 20 or coord[1] >= 8:
+                                        errFlag = True
+                                        break
+                                    if self.predictionBoard[int(coord[1])][int(coord[0])] < 0:
+                                        errFlag = True
+                                        break
+                                if errFlag: continue
+                                for coord in coords:
+                                    self.predictionBoard[int(coord[1])][int(coord[0])] = self.predictionBoard[int(coord[1])][int(coord[0])] + ship[1]
+                        else:
+                            continue
